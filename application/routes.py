@@ -1,14 +1,22 @@
+from datetime import datetime
 from flask import render_template, flash, url_for, request
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.urls import url_parse
 from werkzeug.utils import redirect
 
 from application import app, db
-from application.forms import LoginForm, RegistrationForm
+from application.forms import LoginForm, RegistrationForm, EditProfileForm
 from application.models import Users
 
 posts = [{"author": {"username": "Vova"}, "body": "I want to be programmer"},
          {"author": {"username": "Tanya"}, "body": "I want to be cosmetolog"}]
+
+
+@app.before_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
 
 
 @app.route('/')
@@ -56,3 +64,30 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
+
+@app.route('/user/<username>')
+def profile(username):
+    user = Users.query.filter_by(username=username).first_or_404()
+    posts = [
+        {'author': user, 'body': 'Test post #1'},
+        {'author': user, 'body': 'Test post #2'}
+    ]
+    return render_template('profile.html', user=user, posts=posts)
+
+
+@app.route('/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        current_user.username = form.username.data
+        current_user.about = form.about.data
+        db.session.commit()
+        flash("Your changes have been saved!")
+        return redirect(url_for('profile', username=current_user.username))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.about.data = current_user.about
+    return render_template('edit_profile.html', title='Edit Profile',
+                           form=form)
