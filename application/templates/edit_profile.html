@@ -18,6 +18,7 @@
         <span style="color: red;">[{{ error }}]</span>
         {% endfor %}
     </p>
-    <p>{{ form.save() }}</p>
+    <span><a href="{{ url_for('profile', username=current_user.username) }}">Back</a></span>
+    <span>{{ form.save() }}</span>
 </form>
 {% endblock %}
