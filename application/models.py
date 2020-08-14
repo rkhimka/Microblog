@@ -6,6 +6,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from application import db, login
 
+followers = db.Table('followers',
+                     db.Column('follower_id', db.Integer, db.ForeignKey('users.id')),
+                     db.Column('followed_id', db.Integer, db.ForeignKey('users.id'))
+                     )
+
 
 class Users(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -15,6 +20,10 @@ class Users(UserMixin, db.Model):
     about = db.Column(db.String(150))
     last_seen = db.Column(db.String(100), index=True, unique=True)
     posts = db.relationship('Posts', backref='author', lazy='dynamic')
+    followed = db.relationship('Users', secondary=followers,
+                               primaryjoin=(followers.c.follower_id == id),
+                               secondaryjoin=(followers.c.followed_id == id),
+                               backref=db.backref('followers', lazy='dynamic'), lazy='dynamic')
 
     def __repr__(self):
         return "<User {}>".format(self.username)
@@ -28,6 +37,24 @@ class Users(UserMixin, db.Model):
 
     def set_password(self, pwd):
         self.password = generate_password_hash(pwd)
+
+    # followers functionality implementation
+    def follow(self, user):
+        if not self.is_following(user):
+            self.followed.append(user)
+
+    def unfollow(self, user):
+        if self.is_following(user):
+            self.followed.remove(user)
+
+    def is_following(self, user):
+        return self.followed.filter(followers.c.followed_id == user.id).count() > 0
+
+    def followed_posts(self):
+        flwd_posts = Posts.query.join(followers, (followers.c.followed_id == Posts.user_id)).filter(
+            followers.c.follower_id == self.id)
+        own_posts = Posts.query.filter_by(Posts.user_id == self.id)
+        return flwd_posts.union(own_posts).order_by(Posts.timestamp.desc())
 
 
 class Posts(db.Model):
