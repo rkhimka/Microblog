@@ -5,11 +5,8 @@ from werkzeug.urls import url_parse
 from werkzeug.utils import redirect
 
 from application import app, db
-from application.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm
-from application.models import Users
-
-posts = [{"author": {"username": "Vova"}, "body": "I want to be programmer"},
-         {"author": {"username": "Tanya"}, "body": "I want to be cosmetolog"}]
+from application.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm, PostForm
+from application.models import Users, Posts
 
 
 @app.before_request
@@ -19,11 +16,34 @@ def before_request():
         db.session.commit()
 
 
-@app.route('/')
-@app.route('/index')
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
-    return render_template("index.html", title="Home", posts=posts)
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Posts(body=form.post.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post is now live!')
+        return redirect(url_for('index'))
+    page = request.args.get('page', 1, type=int)
+    posts = current_user.followed_posts().paginate(page, app.config['POSTS_PER_PAGE'], False)
+    next_url = url_for('index', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('index', page=posts.prev_num) if posts.has_prev else None
+    return render_template("index.html", title="Home page", form=form, posts=posts.items, next_url=next_url,
+                           prev_url=prev_url)
+
+
+@app.route('/news', methods=['GET', 'POST'])
+@login_required
+def news():
+    page = request.args.get('page', 1, type=int)
+    posts = Posts.query.order_by(Posts.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    next_url = url_for('news', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('news', page=posts.prev_num) if posts.has_prev else None
+    return render_template("index.html", title="Home page", posts=posts.items, next_url=next_url,
+                           prev_url=prev_url)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -69,12 +89,13 @@ def logout():
 @app.route('/user/<username>')
 def profile(username):
     user = Users.query.filter_by(username=username).first_or_404()
-    posts = [
-        {'author': user, 'body': 'Test post #1'},
-        {'author': user, 'body': 'Test post #2'}
-    ]
+    page = request.args.get('page', 1, type=int)
+    posts = user.posts.order_by(Posts.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    next_url = url_for('profile', username=user.username, page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('profile', username=user.username, page=posts.prev_num) if posts.has_prev else None
     form = EmptyForm()
-    return render_template('profile.html', user=user, posts=posts, form=form)
+    return render_template('profile.html', user=user, posts=posts.items, form=form, next_url=next_url,
+                           prev_url=prev_url)
 
 
 @app.route('/edit', methods=['GET', 'POST'])

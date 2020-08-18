@@ -53,7 +53,7 @@ class Users(UserMixin, db.Model):
     def followed_posts(self):
         flwd_posts = Posts.query.join(followers, (followers.c.followed_id == Posts.user_id)).filter(
             followers.c.follower_id == self.id)
-        own_posts = Posts.query.filter_by(Posts.user_id == self.id)
+        own_posts = Posts.query.filter_by(user_id=self.id)
         return flwd_posts.union(own_posts).order_by(Posts.timestamp.desc())
 
 
