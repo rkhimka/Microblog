@@ -5,7 +5,9 @@ from werkzeug.urls import url_parse
 from werkzeug.utils import redirect
 
 from application import app, db
-from application.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm, PostForm
+from application.email import send_reset_password_email
+from application.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm, PostForm, ResetPasswordForm, \
+    SetNewPasswordForm
 from application.models import Users, Posts
 
 
@@ -153,3 +155,33 @@ def unfollow(username):
         return redirect(url_for('profile', username=username))
     else:
         return redirect(url_for('index'))
+
+
+@app.route('/reset', methods=['GET', 'POST'])
+def reset_password_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user = Users.query.filter_by(email=form.email.data).first()
+        if user:
+            send_reset_password_email(user)
+            flash("Letter with temporary password has been sent to your email!")
+            return redirect("login")
+    return render_template("reset_password_request.html", title='Reset Password', form=form)
+
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    user = Users.verify_reset_password_token(token)
+    if not user:
+        return redirect(url_for('index'))
+    form = SetNewPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+        flash('Your password has been reset!')
+        return redirect(url_for('login'))
+    return render_template('reset_password.html', form=form)
