@@ -20,7 +20,7 @@ class Users(UserMixin, db.Model):
     email = db.Column(db.String(100), index=True, unique=True)
     password = db.Column(db.String(128))
     about = db.Column(db.String(150))
-    last_seen = db.Column(db.String(100), index=True, unique=True)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     posts = db.relationship('Posts', backref='author', lazy='dynamic')
     followed = db.relationship('Users', secondary=followers,
                                primaryjoin=(followers.c.follower_id == id),
