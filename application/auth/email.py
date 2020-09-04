@@ -23,5 +23,5 @@ def send_reset_password_email(user):
     send_message('[Microblog] Reset password request',
                  sender=app.config['ADMINS'][0],
                  recipients=[user.email],
-                 body=render_template('email/reset_pass.txt', user=user, token=token),
-                 html_part=render_template('email/reset_password.html', user=user, token=token))
+                 body=render_template('./email/reset_pass.txt', user=user, token=token),
+                 html_part=render_template('./email/reset_password.html', user=user, token=token))

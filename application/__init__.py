@@ -16,10 +16,22 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login = LoginManager(app)
-login.login_view = 'login'
+login.login_view = 'auth.login'
 mail = Mail(app)
 bootstrap = Bootstrap(app)
 moment = Moment(app)
+
+from application.errors import errors as err_bp
+
+app.register_blueprint(err_bp)
+
+from application.auth import a as auth_bp
+
+app.register_blueprint(auth_bp, url_prefix='/auth')
+
+from application.main import main as main_bp
+
+app.register_blueprint(main_bp, url_prefix='/main')
 
 if not app.debug:
     if not os.path.exists('app_logs'):
@@ -33,5 +45,5 @@ if not app.debug:
     app.logger.setLevel(logging.INFO)
     app.logger.info('Microblog startup')
 
-
-from application import routes, models, errors
+from application import models, errors
+from application.auth import routes
