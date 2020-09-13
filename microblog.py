@@ -1,5 +1,7 @@
-from application import app, db, mail
+from application import db, mail, create_app
 from application.models import Users, Posts
+
+app = create_app()
 
 
 @app.shell_context_processor
