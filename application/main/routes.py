@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from flask import render_template, flash, url_for, request
+from flask import render_template, flash, url_for, request, current_app
 from flask_login import current_user, login_required
 from werkzeug.utils import redirect
 
-from application import app, db
+from application import db
 from application.auth.forms import EditProfileForm, EmptyForm, PostForm
 from application.main import main
 from application.models import Users, Posts
@@ -29,7 +29,7 @@ def index():
         flash('Your post is now live!')
         return redirect(url_for('index'))
     page = request.args.get('page', 1, type=int)
-    posts = current_user.followed_posts().paginate(page, app.config['POSTS_PER_PAGE'], False)
+    posts = current_user.followed_posts().paginate(page, current_app.config['POSTS_PER_PAGE'], False)
     next_url = url_for('.index', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('.index', page=posts.prev_num) if posts.has_prev else None
     return render_template("index.html", title="Home page", form=form, posts=posts.items, next_url=next_url,
@@ -40,7 +40,7 @@ def index():
 @login_required
 def news():
     page = request.args.get('page', 1, type=int)
-    posts = Posts.query.order_by(Posts.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    posts = Posts.query.order_by(Posts.timestamp.desc()).paginate(page, current_app.config['POSTS_PER_PAGE'], False)
     next_url = url_for('.news', page=posts.next_num) if posts.has_next else None
     prev_url = url_for('.news', page=posts.prev_num) if posts.has_prev else None
     return render_template("index.html", title="Home page", posts=posts.items, next_url=next_url,
@@ -52,7 +52,7 @@ def news():
 def profile(username):
     user = Users.query.filter_by(username=username).first_or_404()
     page = request.args.get('page', 1, type=int)
-    posts = user.posts.order_by(Posts.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    posts = user.posts.order_by(Posts.timestamp.desc()).paginate(page, current_app.config['POSTS_PER_PAGE'], False)
     next_url = url_for('.profile', username=user.username, page=posts.next_num) if posts.has_next else None
     prev_url = url_for('.profile', username=user.username, page=posts.prev_num) if posts.has_prev else None
     form = EmptyForm()
